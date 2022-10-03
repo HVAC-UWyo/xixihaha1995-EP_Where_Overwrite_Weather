@@ -12,23 +12,26 @@ def overwrite_weather(state):
     global one_time_overwrite_weather, outdoor_dry_bulb_actuator
     sys.stdout.flush()
     if one_time_overwrite_weather:
-        if api.exchange.api_data_fully_ready(state):
-            # val = api.exchange.list_available_api_data_csv()
-            # with open('/tmp/data.csv', 'w') as f:
-            #     f.write(val.decode(encoding='utf-8'))
-            outdoor_dry_bulb_actuator = api.exchange.get_actuator_handle(
-                state, "Weather Data", "Site Outdoor Air Drybulb Temperature", "Environment"
-            )
-            if outdoor_temp_sensor == -1 or outdoor_dry_bulb_actuator == -1:
-                sys.exit(1)
-            one_time_overwrite_weather = False
-    api.exchange.set_actuator_value(state, outdoor_dry_bulb_actuator, 35)
+        if not api.exchange.api_data_fully_ready(state):
+            return
+        # val = api.exchange.list_available_api_data_csv()
+        # with open('/tmp/data.csv', 'w') as f:
+        #     f.write(val.decode(encoding='utf-8'))
+        outdoor_dry_bulb_actuator = api.exchange.get_actuator_handle(
+            state, "Weather Data", "Site Outdoor Air Drybulb Temperature", "Environment"
+        )
+        if outdoor_temp_sensor == -1 or outdoor_dry_bulb_actuator == -1:
+            sys.exit(1)
+        one_time_overwrite_weather = False
+    api.exchange.set_actuator_value(state, outdoor_dry_bulb_actuator, 15)
     sim_time = api.exchange.current_sim_time(state)
     print("Current sim time is: %f" % sim_time)
 
 def get_overwriten_weather(state):
     global outdoor_temp_sensor, one_time_get_overwriten_weather
     if one_time_get_overwriten_weather:
+        if not api.exchange.api_data_fully_ready(state):
+            return
         outdoor_temp_sensor = api.exchange.get_variable_handle(
             state, u"SITE OUTDOOR AIR DRYBULB TEMPERATURE", u"ENVIRONMENT"
         )
@@ -40,6 +43,7 @@ def get_overwriten_weather(state):
 api = EnergyPlusAPI()
 state = api.state_manager.new_state()
 api.runtime.callback_begin_zone_timestep_before_set_current_weather(state, overwrite_weather)
+# api.runtime.callback_end_zone_timestep_after_zone_reporting(state, overwrite_weather)
 api.runtime.callback_end_system_timestep_after_hvac_reporting(state, get_overwriten_weather)
 api.exchange.request_variable(state, "SITE OUTDOOR AIR DRYBULB TEMPERATURE", "ENVIRONMENT")
 api.exchange.request_variable(state, "SITE OUTDOOR AIR DEWPOINT TEMPERATURE", "ENVIRONMENT")
