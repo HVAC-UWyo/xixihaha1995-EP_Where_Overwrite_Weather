@@ -18,9 +18,9 @@ def overwrite_weather(state):
         # with open('/tmp/data.csv', 'w') as f:
         #     f.write(val.decode(encoding='utf-8'))
         outdoor_dry_bulb_actuator = api.exchange.get_actuator_handle(
-            state, "Weather Data", "Site Outdoor Air Drybulb Temperature", "Environment"
+            state, "Weather Data", "Outdoor Dry Bulb", "Environment"
         )
-        if outdoor_temp_sensor == -1 or outdoor_dry_bulb_actuator == -1:
+        if outdoor_dry_bulb_actuator == -1:
             sys.exit(1)
         one_time_overwrite_weather = False
     api.exchange.set_actuator_value(state, outdoor_dry_bulb_actuator, 15)
@@ -28,28 +28,31 @@ def overwrite_weather(state):
     print("Current sim time is: %f" % sim_time)
 
 def get_overwriten_weather(state):
-    global outdoor_temp_sensor, one_time_get_overwriten_weather
+    global outdoor_temp_sensor, one_time_get_overwriten_weather,hvac_heat_rejection_sensor_handle
     if one_time_get_overwriten_weather:
         if not api.exchange.api_data_fully_ready(state):
             return
         outdoor_temp_sensor = api.exchange.get_variable_handle(
             state, u"SITE OUTDOOR AIR DRYBULB TEMPERATURE", u"ENVIRONMENT"
         )
+        hvac_heat_rejection_sensor_handle = \
+            api.exchange.get_variable_handle(state,"HVAC System Total Heat Rejection Energy",
+                                             "SIMHVAC")
         one_time_get_overwriten_weather = False
     oa_temp = api.exchange.get_variable_value(state, outdoor_temp_sensor)
     print("Actuated outdoor temp value is: %s" % oa_temp)
+    hvac_heat_rejection = api.exchange.get_variable_value(state, hvac_heat_rejection_sensor_handle)
+    print("HVAC Heat Rejection Energy is: %s" % hvac_heat_rejection)
 
 
 api = EnergyPlusAPI()
 state = api.state_manager.new_state()
 api.runtime.callback_begin_zone_timestep_before_set_current_weather(state, overwrite_weather)
-# api.runtime.callback_end_zone_timestep_after_zone_reporting(state, overwrite_weather)
 api.runtime.callback_end_system_timestep_after_hvac_reporting(state, get_overwriten_weather)
-api.exchange.request_variable(state, "SITE OUTDOOR AIR DRYBULB TEMPERATURE", "ENVIRONMENT")
-api.exchange.request_variable(state, "SITE OUTDOOR AIR DEWPOINT TEMPERATURE", "ENVIRONMENT")
-# trim off this python script name when calling the run_energyplus function so you end up with just
-# the E+ args, like: -d /output/dir -D /path/to/input.idf
-import os
+api.exchange.request_variable(state, "HVAC System Total Heat Rejection Energy", "SIMHVAC")
+api.exchange.request_variable(state, "Site Outdoor Air Drybulb Temperature", "ENVIRONMENT")
+
+
 output_path = 'ep_outputs'
 weather_file_path = 'USA_IL_Chicago-OHare.Intl.AP.725300_TMY3.epw'
 idfFilePath = '5ZoneAirCooled.idf'
