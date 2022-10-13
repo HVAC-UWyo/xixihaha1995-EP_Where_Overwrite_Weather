@@ -23,6 +23,7 @@ def overwrite_weather(state):
         if outdoor_dry_bulb_actuator == -1:
             sys.exit(1)
         one_time_overwrite_weather = False
+
     api.exchange.set_actuator_value(state, outdoor_dry_bulb_actuator, 15)
     sim_time = api.exchange.current_sim_time(state)
     print("Current sim time is: %f" % sim_time)
@@ -47,6 +48,7 @@ def get_overwriten_weather(state):
 
 api = EnergyPlusAPI()
 state = api.state_manager.new_state()
+psychrometric = api.functional.psychrometrics(state)
 api.runtime.callback_begin_zone_timestep_before_set_current_weather(state, overwrite_weather)
 api.runtime.callback_end_system_timestep_after_hvac_reporting(state, get_overwriten_weather)
 api.exchange.request_variable(state, "HVAC System Total Heat Rejection Energy", "SIMHVAC")
